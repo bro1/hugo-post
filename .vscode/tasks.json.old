@@ -1,0 +1,27 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "0.1.0",
+    "command": "mvn",
+    "isShellCommand": true,
+    "showOutput": "always",
+    "suppressTaskName": false,
+    "tasks": [
+        {
+            "taskName": "verify",
+            "args": ["-B", "verify"],
+            "isBuildCommand": true
+        },
+        {
+            "taskName": "test",
+            "args": ["-B", "test"],
+            "isTestCommand": true
+        },
+        {
+            "taskName": "jfx:jar",
+            "args": ["-B", "jfx:jar"],
+            "isBuildCommand": true
+        }
+     
+    ]
+}
