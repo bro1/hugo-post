@@ -52,7 +52,7 @@ public class CiteController extends AbstractStandardController {
    		
     	if (!textstring.isBlank() && !urlstring.isBlank()) {
     		var start = textArea.getSelection().getStart();
-    		textArea.insertText(start, "> -- <cite>[" + textstring + "](" + urlstring +")\n" );
+    		textArea.insertText(start, "> -- <cite>[" + textstring + "](" + urlstring +")</cite>\n" );
     	}
     		
     	getStage().close();

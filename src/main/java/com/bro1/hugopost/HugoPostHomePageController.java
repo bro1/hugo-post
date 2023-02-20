@@ -529,7 +529,7 @@ private LinkedHashMap<String, Integer> sort(HashMap<String, Integer> hashMap) {
 //		  }
 		  
 	  } catch (IOException e) {
-		  System.out.println("Warnign, cannot process file " + ff.getAbsolutePath());
+		  System.out.println("Warning, cannot process file " + ff.getAbsolutePath());
 	  }
 	  
   }
