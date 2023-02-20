@@ -44,11 +44,8 @@ import javafx.stage.Stage;
 
 public class HugoPostHomePageController implements Initializable {
 
-	
-	
 
-
-private static final String kInitialDir = "/home/bro1/projects/laisvamaniaicom/content/post";
+private static final String kInitialDir = "/home/bro1/projects/laisvamaniai/content/post";
 
 public Stage myStage;
 
@@ -418,7 +415,8 @@ public Stage myStage;
     }    
 	
   void readFiles() {
-	  var f = new File("/home/bro1/projects/laisvamaniaicom/content/post/");
+	  var f = new File(kInitialDir);
+	  
 	  fetchFiles(f, ff->proc(ff));
 	  
 	  

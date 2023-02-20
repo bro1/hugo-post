@@ -1,27 +1,54 @@
 {
     // See https://go.microsoft.com/fwlink/?LinkId=733558
     // for the documentation about the tasks.json format
-    "version": "0.1.0",
+    "version": "2.0.0",
     "command": "mvn",
-    "isShellCommand": true,
-    "showOutput": "always",
     "suppressTaskName": false,
     "tasks": [
         {
-            "taskName": "verify",
-            "args": ["-B", "verify"],
-            "isBuildCommand": true
+            "label": "verify",
+            "type": "shell",
+            "command": "mvn",
+            "args": [
+                "verify",
+                "-B",
+                "verify"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "_id": "build",
+                "isDefault": false
+            }
         },
         {
-            "taskName": "test",
-            "args": ["-B", "test"],
-            "isTestCommand": true
+            "label": "test",
+            "type": "shell",
+            "command": "mvn",
+            "args": [
+                "test",
+                "-B",
+                "test"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "_id": "test",
+                "isDefault": false
+            }
         },
         {
-            "taskName": "jfx:jar",
-            "args": ["-B", "jfx:jar"],
-            "isBuildCommand": true
+            "label": "jfx:jar",
+            "type": "shell",
+            "command": "mvn",
+            "args": [
+                "jfx:jar",
+                "-B",
+                "jfx:jar"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "_id": "build",
+                "isDefault": false
+            }
         }
-     
     ]
 }
