@@ -95,17 +95,19 @@ public Stage myStage;
 
 	@FXML
     void onTitleChange(KeyEvent event) {
-		var t = title.getText();
-		var d = new Date();
+
+		// Only update the file name if this is a new file
+		if (currentFile == null) {
+			var t = title.getText();
+			var d = new Date();
 		
- 	   SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
- 	   var ds = df.format(d);
- 	   
- 	   
- 	   SimpleDateFormat dfm = new SimpleDateFormat("yyyy/yyyy-MM");
- 	   var dsm = dfm.format(d);
- 	   
- 	   proposedFileName.setText(dsm + "/" + ds + " " + t + ".md"); 		
+ 	   		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+ 	   		var ds = df.format(d);
+ 	    	   
+ 	   		SimpleDateFormat dfm = new SimpleDateFormat("yyyy/yyyy-MM");
+ 	   		var dsm = dfm.format(d); 	   
+ 	   		proposedFileName.setText(dsm + "/" + ds + " " + t + ".md"); 
+		}
     }	
 	
     @FXML
@@ -140,6 +142,8 @@ public Stage myStage;
 
 		if (file != null) {
 			currentFile = file;
+			// Display this in the dialog
+			proposedFileName.setText(currentFile.getAbsolutePath());
 		}
 
 		doLoad();
