@@ -99,6 +99,9 @@ public Stage myStage;
 		// Only update the file name if this is a new file
 		if (currentFile == null) {
 			var t = title.getText();
+			
+			t = slug(t);
+			
 			var d = new Date();
 		
  	   		SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
@@ -110,6 +113,20 @@ public Stage myStage;
 		}
     }	
 	
+    private String slug(String t) {
+        String from = "ąčęėįšųūžĄČĘĖĮŠŲŪŽ";
+        String to = "aceeisuuzACEEISUUZ";
+        
+        String n = t;
+        
+        for (int i = 0; i < from.length(); i++) {
+            n = n.replaceAll(new String(from.substring(i, i+1)), to.substring(i, i+1));
+        }
+                
+        return n;
+        
+    }
+
     @FXML
     void onTagsAction(ActionEvent event) {
 
