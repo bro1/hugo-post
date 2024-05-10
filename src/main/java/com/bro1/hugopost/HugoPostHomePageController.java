@@ -152,7 +152,21 @@ public Stage myStage;
 		// Set extension filter for text files
 		FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("Markdown (*.md)", "*.md");
 		fileChooser.getExtensionFilters().add(extFilter);
-		fileChooser.setInitialDirectory(new File(kInitialDir));
+		
+        var d = new Date();
+        SimpleDateFormat dfm = new SimpleDateFormat("yyyy/yyyy-MM");
+        var dsm = dfm.format(d);
+        
+        String initialDirCurrentMonthStr = kInitialDir + "/" +dsm;
+        
+        File initialDirCurrentMonthFile = new File(initialDirCurrentMonthStr);
+        
+        
+        if (initialDirCurrentMonthFile.exists()) {
+            fileChooser.setInitialDirectory(initialDirCurrentMonthFile);
+        } else {
+            fileChooser.setInitialDirectory(new File(kInitialDir));
+        }
 
 		// Show save file dialog
 		File file = fileChooser.showOpenDialog(myStage);
@@ -168,8 +182,7 @@ public Stage myStage;
     }
 
     private void doLoad() {
-    	
-    	
+    	   	
       postTags.getItems().clear();
       category.getSelectionModel().clearSelection();
       text.clear();
