@@ -303,34 +303,28 @@ public Stage myStage;
     	String title = this.title.getText();    			
     	String description = this.description.getText();
     	
-    	   Map<String, Object> data = new HashMap<String, Object>();
+    	   Map<String, Object> data = new LinkedHashMap<String, Object>();
     	   data.put("title", title);
     	   data.put("description", description);
     	   
-    	   List<String> tags = postTags.getItems().stream()
-    			   .map(Category::getName)
-    			   .collect(Collectors.toList());    	   
-    	   if (!tags.isEmpty()) {
-    		   data.put("tags", tags.toArray(new String[] {}));
-    	   }
-    	   
+           var date  = postDate != null ? postDate : new Date();  
+           data.put("date", date);
+           
+           data.put("author", "Laisvamanis");
+    	       	   
     	   
     	   Category cat = category.getSelectionModel().getSelectedItem();
     	   if (cat != null) {
 	    	   data.put("categories", new String[] {cat.name});	    	   
     	   }
     	   
-    	   data.put("author", "Laisvamanis");
-    	   
-    	   var date  = postDate != null ? postDate : new Date();  
-    	   
-    	   // date: 2020-04-05T10:05:00+13:00
-//    	   SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
-//    	   var ds = df.format(date);
-//    	   data.put("date", ds);
-    	   
-    	   data.put("date", date);
-    	   
+           List<String> tags = postTags.getItems().stream()
+                   .map(Category::getName)
+                   .collect(Collectors.toList());          
+           if (!tags.isEmpty()) {
+               data.put("tags", tags.toArray(new String[] {}));
+           }
+           
     	   
     	   
     	   DumperOptions options = new DumperOptions();
@@ -342,7 +336,6 @@ public Stage myStage;
     	   Yaml yaml = new Yaml(options);
     	    
     	   String yamloutput = yaml.dump(data);
-//    	   System.out.println(yamloutput);
     	
     	   try (PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(currentFile)))) {
     		   
