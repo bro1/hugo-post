@@ -1,6 +1,8 @@
 package com.bro1.hugopost;
 
 import javafx.stage.FileChooser;
+
+import java.awt.Desktop;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -10,13 +12,17 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -84,6 +90,50 @@ public Stage myStage;
 	private void onMenuExit(ActionEvent e) {
 		Platform.exit();
 	}
+	
+	
+    @FXML
+    private void onMenuPostToMastodon(ActionEvent e) {
+           String a = text.getText();
+           String enc = "";
+           try {
+               enc = URLEncoder.encode(a, StandardCharsets.UTF_8.toString());
+           } catch (Exception ex) {
+               ex.printStackTrace();
+           }
+           
+           String url = "https://mas.to/share/?text=" + enc;
+           launchBrowser(url);
+    }
+    
+    private String urlenc(String a) {
+        String enc = "";
+        try {
+            enc = URLEncoder.encode(a, StandardCharsets.UTF_8.toString());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        
+        return enc;
+    }
+    
+    
+    @FXML
+    private void onMenuPostToFacebook(ActionEvent e) {
+                
+        String t = urlenc(title.getText());        
+        String enc = urlenc(text.getText());
+                
+        String url = "https://iamnotadoctorbut.wordpress.com/wp-admin/post-new.php?post_title="  + t  + "&content=" + enc;
+        launchBrowser(url);        
+
+    }
+    
+    @FXML
+    private void onMenuPostToBluesky(ActionEvent e) {
+
+    }
+	
 	
 	@FXML
 	private void onCite(ActionEvent e) {
@@ -598,6 +648,20 @@ private String readHeader(BufferedReader br) throws IOException {
 	  readFiles();
   }
 
+
+@FXML
+void onPostTags(MouseEvent event) {
+    
+    // when double clicked - remove selected item from the post tags
+    
+    if (event.getClickCount() >= 2) {
+        var v = postTags.getSelectionModel().getSelectedItem();
+        postTags.getItems().remove(v);
+    }
+}
+
+
+
 	@FXML
 	void onAllTags(MouseEvent event) {		
 		var v = allTags.getSelectionModel().getSelectedItem();
@@ -612,5 +676,76 @@ private String readHeader(BufferedReader br) throws IOException {
 		
 		postTags.getItems().add(v.clone());
 	}
-  
+
+	
+	   public void launchBrowser(String targeturl) {
+	        List<String> command = new LinkedList<String>();
+	        
+	        String os = System.getProperty("os.name").toLowerCase();                
+	        var isWindows = os.indexOf("win") >= 0;
+	        var isMac = os.indexOf("mac") >= 0;
+	        var isLinuxOrUnix = os.indexOf("nix") >=0 || os.indexOf("nux") >=0;
+	        
+	        if (currentBrowser.equals("default")) {
+	            
+	            if (isLinuxOrUnix) {
+	                command.add("xdg-open");                
+	                command.add(targeturl);
+	                
+	                try {                   
+	                    new ProcessBuilder(command).start();                  
+	                } catch (Throwable t) {
+	                    t.printStackTrace(System.err);
+	                }           
+	                
+	            } else if (isWindows || isMac) {
+	                
+	                try {
+	                    Desktop.getDesktop().browse(new URI(targeturl));
+	                } catch (Throwable t) {
+	                    t.printStackTrace(System.err);              
+	                }
+	            }
+	        } else {        
+	            List<String> l = null; 
+	            if (isLinuxOrUnix) {
+	                l = browsers.get(currentBrowser);       
+	            } else if (isWindows) {
+	                l = winBrowsers.get(currentBrowser);
+	            }
+
+	            command.addAll(l);                  
+	            command.add(targeturl);
+
+	            try {
+	                  System.out.println(targeturl);
+	                  new ProcessBuilder(command).start();                  
+	            } catch (Throwable th) {
+	                th.printStackTrace(System.err);
+	            }
+
+	        }
+	    }
+
+	   
+	   public String currentBrowser = "default";	   
+	   
+	   
+	    public Map<String, List<String>> browsers = new HashMap<>();
+	    {
+	        browsers.put("chrome anonymous", List.of("google-chrome", "--incognito"));
+	        browsers.put("chrome", List.of("google-chrome"));
+	        browsers.put("firefox", List.of("firefox"));
+	        browsers.put("firefox private", List.of("firefox", "-private-window"));
+	    }
+	    
+	    public Map<String, List<String>> winBrowsers = new HashMap<>();
+	    {
+	        winBrowsers.put("chrome anonymous", List.of("C:/Program Files (x86)/Google/Chrome/Application/chrome.exe", "--incognito"));
+	        winBrowsers.put("chrome", List.of("C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"));      
+	        winBrowsers.put("firefox", List.of("C:/Program Files/Mozilla Firefox/firefox.exe"));
+	        winBrowsers.put("firefox private", List.of("c:/Program Files/Mozilla Firefox/firefox.exe", "-private-window"));
+	    }
+	   
+	
 }

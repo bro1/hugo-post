@@ -45,6 +45,16 @@
                       <MenuItem onAction="#onCite" text="_Cite" />
                     </items>
                   </Menu>
+                  
+                  <Menu text="_Post">
+                    <items>
+                      <MenuItem onAction="#onMenuPostToMastodon" text="_Mastodon" />
+                      <MenuItem onAction="#onMenuPostToBluesky" text="_Bluesky" />
+                      <MenuItem onAction="#onMenuPostToFacebook" text="_Facebook" />
+                    </items>
+                  </Menu>
+                  
+                  
                    </menus>
                  </MenuBar>      
                  <TextField fx:id="title" onDragDropped="#onDragDropped" onDragOver="#onDragOver" onKeyTyped="#onTitleChange" promptText="Title" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="30.0" />
@@ -84,7 +94,7 @@
             <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
          </rowConstraints>
          <children>
-            <ListView fx:id="postTags" prefHeight="200.0" prefWidth="200.0" />
+            <ListView fx:id="postTags" onMouseClicked="#onPostTags" prefHeight="200.0" prefWidth="200.0" />
             <ListView fx:id="allTags" onMouseClicked="#onAllTags" prefWidth="200.0" GridPane.rowIndex="1" />
          </children>
       </GridPane>
