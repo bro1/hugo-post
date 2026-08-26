@@ -1,6 +1,10 @@
 package com.bro1.hugopost;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
 import java.net.URL;
+import java.util.function.Consumer;
 
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.JavaFXBuilderFactory;
@@ -47,5 +51,61 @@ public class Utils {
 		stage.show();
 
 	}
+
+    public static String readHeader(BufferedReader br) throws IOException {
+        var started = false;
+        var finished = false;
+        var header = "";
+
+        // read line by line
+        String line;
+        while ((line = br.readLine()) != null) {
+            if (line.startsWith("---") && !started) {
+                started = true;
+                continue;
+            }
+
+            if (line.startsWith("---")) {
+                finished = true;
+                break;
+            }
+
+            header += line + "\n";
+        }
+
+        if (finished) return header;
+        return "";
+    }
+
+    public static String readContent(BufferedReader br) throws IOException {
+        var content = "";
+
+        // read line by line
+        String line;
+        while ((line = br.readLine()) != null) {
+            if (content.isEmpty()) {
+                content += line;
+            } else {
+                content += "\n" + line;
+            }
+        }
+
+        return content;
+    }
+
+    public static void fetchFiles(File dir, Consumer<File> fileConsumer) {
+        if (dir.isDirectory()) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File file1 : files) {
+                    fetchFiles(file1, fileConsumer);
+                }
+            }
+        } else if (
+            dir.isFile() && dir.getName().toLowerCase().endsWith(".md")
+        ) {
+            fileConsumer.accept(dir);
+        }
+    }
 	
 }

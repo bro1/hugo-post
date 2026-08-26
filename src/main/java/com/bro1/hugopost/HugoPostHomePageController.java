@@ -47,12 +47,6 @@ import org.yaml.snakeyaml.Yaml;
 
 public class HugoPostHomePageController implements Initializable {
 
-    private static final String kInitialDir =
-        "~/projects/laisvamaniai/content/post".replaceFirst(
-            "^~",
-            System.getProperty("user.home")
-        );
-
     public Stage myStage;
 
     private HashMap<String, Integer> tags = new HashMap<>();
@@ -116,7 +110,7 @@ public class HugoPostHomePageController implements Initializable {
     }
 
     @FXML
-    private void onMenuPostToFacebook(ActionEvent e) {
+    private void onMenuPostToWordPress(ActionEvent e) {
         String t = urlenc(title.getText());
         String enc = urlenc(text.getText());
 
@@ -128,8 +122,26 @@ public class HugoPostHomePageController implements Initializable {
         launchBrowser(url);
     }
 
+
+
     @FXML
-    private void onMenuPostToBluesky(ActionEvent e) {}
+    private void onMenuPostToFacebook(ActionEvent e) {
+    }
+
+    @FXML
+    private void onMenuPostToBluesky(ActionEvent e) {
+        String a = text.getText();
+        String enc = "";
+        try {
+            enc = URLEncoder.encode(a, StandardCharsets.UTF_8.toString());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        String url = "https://bsky.app/intent/compose?text=" + enc;
+        launchBrowser(url);
+
+    }
 
     @FXML
     private void onCite(ActionEvent e) {
@@ -201,14 +213,14 @@ public class HugoPostHomePageController implements Initializable {
         SimpleDateFormat dfm = new SimpleDateFormat("yyyy/yyyy-MM");
         var dsm = dfm.format(d);
 
-        String initialDirCurrentMonthStr = kInitialDir + "/" + dsm;
+        String initialDirCurrentMonthStr = Settings.kInitialDir + "/" + dsm;
 
         File initialDirCurrentMonthFile = new File(initialDirCurrentMonthStr);
 
         if (initialDirCurrentMonthFile.exists()) {
             fileChooser.setInitialDirectory(initialDirCurrentMonthFile);
         } else {
-            fileChooser.setInitialDirectory(new File(kInitialDir));
+            fileChooser.setInitialDirectory(new File(Settings.kInitialDir));
         }
 
         // Show save file dialog
@@ -231,8 +243,8 @@ public class HugoPostHomePageController implements Initializable {
         try (
             BufferedReader in = new BufferedReader(new FileReader(currentFile))
         ) {
-            var header = readHeader(in);
-            var content = readContent(in);
+            var header = Utils.readHeader(in);
+            var content = Utils.readContent(in);
             System.out.println(header);
 
             Yaml y = new Yaml();
@@ -283,27 +295,11 @@ public class HugoPostHomePageController implements Initializable {
         }
     }
 
-    private String readContent(BufferedReader br) throws IOException {
-        var content = "";
-
-        // read line by line
-        String line;
-        while ((line = br.readLine()) != null) {
-            if (content.isEmpty()) {
-                content += line;
-            } else {
-                content += "\n" + line;
-            }
-        }
-
-        return content;
-    }
-
     @FXML
     void onMenuSave(ActionEvent event) {
         if (currentFile == null) {
             currentFile = new File(
-                kInitialDir + File.separator + proposedFileName.getText()
+                Settings.kInitialDir + File.separator + proposedFileName.getText()
             );
 
             //			FileChooser fileChooser = new FileChooser();
@@ -311,7 +307,7 @@ public class HugoPostHomePageController implements Initializable {
             //			// Set extension filter for text files
             //			FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("Markdown (*.md)", "*.md");
             //			fileChooser.getExtensionFilters().add(extFilter);
-            //			fileChooser.setInitialDirectory(new File(kInitialDir));
+            //			fileChooser.setInitialDirectory(new File(Settings.kInitialDir));
             //
             //			// Show save file dialog
             //			File file = fileChooser.showSaveDialog(myStage);
@@ -439,22 +435,10 @@ public class HugoPostHomePageController implements Initializable {
         return f.getName();
     }
 
-    void fetchFiles(File dir, Consumer<File> fileConsumer) {
-        if (dir.isDirectory()) {
-            for (File file1 : dir.listFiles()) {
-                fetchFiles(file1, fileConsumer);
-            }
-        } else if (
-            dir.isFile() && dir.getName().toLowerCase().endsWith(".md")
-        ) {
-            fileConsumer.accept(dir);
-        }
-    }
-
     void readFiles() {
-        var f = new File(kInitialDir);
+        var f = new File(Settings.kInitialDir);
 
-        fetchFiles(f, ff -> proc(ff));
+        Utils.fetchFiles(f, ff -> proc(ff));
 
         this.category.getItems().clear();
 
@@ -518,7 +502,7 @@ public class HugoPostHomePageController implements Initializable {
         System.out.println(ff.getAbsolutePath());
 
         try (BufferedReader in = new BufferedReader(new FileReader(ff))) {
-            var header = readHeader(in);
+            var header = Utils.readHeader(in);
             System.out.println(header);
 
             Yaml y = new Yaml();
@@ -560,31 +544,6 @@ public class HugoPostHomePageController implements Initializable {
                 "Warning, cannot process file " + ff.getAbsolutePath()
             );
         }
-    }
-
-    private String readHeader(BufferedReader br) throws IOException {
-        var started = false;
-        var finished = false;
-        var header = "";
-
-        // read line by line
-        String line;
-        while ((line = br.readLine()) != null) {
-            if (line.startsWith("---") && !started) {
-                started = true;
-                continue;
-            }
-
-            if (line.startsWith("---")) {
-                finished = true;
-                break;
-            }
-
-            header += line + "\n";
-        }
-
-        if (finished) return header;
-        return "";
     }
 
     @Override

@@ -51,6 +51,7 @@
                       <MenuItem onAction="#onMenuPostToMastodon" text="_Mastodon" />
                       <MenuItem onAction="#onMenuPostToBluesky" text="_Bluesky" />
                       <MenuItem onAction="#onMenuPostToFacebook" text="_Facebook" />
+                      <MenuItem onAction="#onMenuPostToWordPress" text="_Wordpress" />                      
                     </items>
                   </Menu>
                   
