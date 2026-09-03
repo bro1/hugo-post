@@ -28,11 +28,28 @@ import java.util.ResourceBundle;
 import java.util.TimeZone;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.concurrent.CompletableFuture;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.ChoiceDialog;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.layout.GridPane;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -86,12 +103,14 @@ public class HugoPostHomePageController implements Initializable {
 
     @FXML
     private void onMenuPostToMastodon(ActionEvent e) {
-        String a = text.getText();
+        String t = urlenc(title.getText());
+        String a = urlenc(text.getText());
         String enc = "";
-        try {
-            enc = URLEncoder.encode(a, StandardCharsets.UTF_8.toString());
-        } catch (Exception ex) {
-            ex.printStackTrace();
+
+        if (t.isBlank()) {
+            enc = a;
+        } else {
+            enc = t + "%0A%0A" + a;
         }
 
         String url = "https://mas.to/share/?text=" + enc;
@@ -115,7 +134,7 @@ public class HugoPostHomePageController implements Initializable {
         String enc = urlenc(text.getText());
 
         String url =
-            "https://iamnotadoctorbut.wordpress.com/wp-admin/post-new.php?post_title=" +
+            "https://laisvamaniai.wordpress.com/wp-admin/post-new.php?post_title=" +
             t +
             "&content=" +
             enc;
@@ -125,17 +144,227 @@ public class HugoPostHomePageController implements Initializable {
 
 
     @FXML
+    private void onMenuFacebookOnboarding(ActionEvent e) {
+        showFacebookOnboardingDialog();
+    }
+
+    private void showFacebookOnboardingDialog() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Facebook OAuth Onboarding");
+        dialog.setHeaderText("Automate Facebook Page Onboarding\n"
+                + "Follow instructions in specs/f-02 facebook oauth onboarding.md");
+
+        ButtonType onboardButtonType = new ButtonType("Automate Onboarding", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(onboardButtonType, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        FacebookOnboarder.SpecDefaults defaults = FacebookOnboarder.loadSpecDefaults();
+
+        TextField appIdField = new TextField(defaults.appId);
+        appIdField.setPromptText("Meta App ID");
+
+        PasswordField appSecretField = new PasswordField();
+        appSecretField.setText(defaults.appSecret);
+        appSecretField.setPromptText("Meta App Secret");
+
+        TextField tokenField = new TextField(defaults.clientToken);
+        tokenField.setPromptText("User Access Token / Client Token");
+
+        String initialPageId = "";
+        try {
+            FacebookConfig existingConfig = FacebookConfig.loadFromHomeDir();
+            if (existingConfig.getPageId() != null) {
+                initialPageId = existingConfig.getPageId();
+            }
+        } catch (Exception ignored) {}
+
+        TextField pageIdField = new TextField(initialPageId);
+        pageIdField.setPromptText("Facebook Page ID (Optional)");
+
+        Button openExplorerBtn = new Button("Open Meta Graph API Explorer");
+        openExplorerBtn.setOnAction(evt -> launchBrowser("https://developers.facebook.com/tools/explorer/"));
+
+        grid.add(new Label("Meta App ID:"), 0, 0);
+        grid.add(appIdField, 1, 0);
+        grid.add(new Label("Meta App Secret:"), 0, 1);
+        grid.add(appSecretField, 1, 1);
+        grid.add(new Label("User Access Token:"), 0, 2);
+        grid.add(tokenField, 1, 2);
+        grid.add(new Label("Page ID (Optional):"), 0, 3);
+        grid.add(pageIdField, 1, 3);
+        grid.add(openExplorerBtn, 1, 4);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.showAndWait().ifPresent(response -> {
+            if (response.getButtonData() == ButtonBar.ButtonData.OK_DONE) {
+                String appId = appIdField.getText() != null ? appIdField.getText().trim() : "";
+                String appSecret = appSecretField.getText() != null ? appSecretField.getText().trim() : "";
+                String userToken = tokenField.getText() != null ? tokenField.getText().trim() : "";
+                String pageId = pageIdField.getText() != null ? pageIdField.getText().trim() : "";
+
+                if (appId.isEmpty() || appSecret.isEmpty() || userToken.isEmpty()) {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Onboarding Error");
+                    alert.setHeaderText("Missing Information");
+                    alert.setContentText("App ID, App Secret, and User Access Token are all required.");
+                    alert.showAndWait();
+                    return;
+                }
+
+                FacebookOnboarder onboarder = new FacebookOnboarder();
+                CompletableFuture.supplyAsync(() -> {
+                    try {
+                        String longLivedToken = onboarder.exchangeForLongLivedToken(appId, appSecret, userToken);
+                        List<FacebookOnboarder.PageInfo> pages = onboarder.fetchManagedPages(longLivedToken, pageId);
+                        return pages;
+                    } catch (Exception ex) {
+                        throw new RuntimeException(ex);
+                    }
+                }).thenAccept(pages -> Platform.runLater(() -> {
+                    FacebookOnboarder.PageInfo selectedPage = null;
+                    if (pages.size() == 1) {
+                        selectedPage = pages.get(0);
+                    } else if (pages.size() > 1) {
+                        ChoiceDialog<FacebookOnboarder.PageInfo> choiceDialog = new ChoiceDialog<>(pages.get(0), pages);
+                        choiceDialog.setTitle("Select Facebook Page");
+                        choiceDialog.setHeaderText("Multiple Facebook Pages Found");
+                        choiceDialog.setContentText("Choose the page you want to post to:");
+                        Optional<FacebookOnboarder.PageInfo> result = choiceDialog.showAndWait();
+                        if (result.isPresent()) {
+                            selectedPage = result.get();
+                        }
+                    }
+
+                    if (selectedPage != null) {
+                        try {
+                            FacebookOnboarder.saveConfig(appId, appSecret, userToken, selectedPage.getId(), selectedPage.getAccessToken());
+                            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                            alert.setTitle("Onboarding Successful");
+                            alert.setHeaderText("Facebook Page Onboarding Complete!");
+                            alert.setContentText("Page Name: " + selectedPage.getName() + "\nPage ID: " + selectedPage.getId() + "\n\nSaved credentials to ~/.hugopost");
+                            alert.showAndWait();
+                        } catch (IOException ioEx) {
+                            Alert alert = new Alert(Alert.AlertType.ERROR);
+                            alert.setTitle("Onboarding Error");
+                            alert.setHeaderText("Failed to save configuration");
+                            alert.setContentText(ioEx.getMessage());
+                            alert.showAndWait();
+                        }
+                    }
+                })).exceptionally(ex -> {
+                    Platform.runLater(() -> {
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("Onboarding Failed");
+                        alert.setHeaderText("Failed to complete Facebook OAuth onboarding");
+                        alert.setContentText(ex.getCause() != null ? ex.getCause().getMessage() : ex.getMessage());
+                        alert.showAndWait();
+                    });
+                    return null;
+                });
+            }
+        });
+    }
+
+    @FXML
     private void onMenuPostToFacebook(ActionEvent e) {
+        FacebookConfig config;
+        try {
+            config = FacebookConfig.loadFromHomeDir();
+        } catch (Exception ex) {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Facebook Configuration Missing");
+            alert.setHeaderText("Facebook configuration is not set up.");
+            alert.setContentText(ex.getMessage() + "\n\nWould you like to start the automated onboarding wizard now?");
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                showFacebookOnboardingDialog();
+            }
+            return;
+        }
+
+        String postTitle = title != null && title.getText() != null ? title.getText().trim() : "";
+        String postText = text != null && text.getText() != null ? text.getText().trim() : "";
+
+        if (postTitle.isEmpty() && postText.isEmpty()) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Facebook Post");
+            alert.setHeaderText("Empty Post");
+            alert.setContentText("Please provide a title or content before posting to Facebook.");
+            alert.showAndWait();
+            return;
+        }
+
+        String message = postTitle.isEmpty() ? postText : (postText.isEmpty() ? postTitle : postTitle + "\n\n" + postText);
+
+        String firstUrl = extractFirstUrl(postText);
+        if (firstUrl == null) {
+            firstUrl = extractFirstUrl(postTitle);
+        }
+
+        StringBuilder requestBodyBuilder = new StringBuilder();
+        requestBodyBuilder.append("message=").append(URLEncoder.encode(message, StandardCharsets.UTF_8));
+        requestBodyBuilder.append("&access_token=").append(URLEncoder.encode(config.getAccessToken(), StandardCharsets.UTF_8));
+
+        if (firstUrl != null && !firstUrl.isBlank()) {
+            requestBodyBuilder.append("&link=").append(URLEncoder.encode(firstUrl.trim(), StandardCharsets.UTF_8));
+        }
+
+        HttpClient client = HttpClient.newHttpClient();
+        String requestBody = requestBodyBuilder.toString();
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://graph.facebook.com/v19.0/" + config.getPageId() + "/feed"))
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                Platform.runLater(() -> {
+                    if (response.statusCode() == 200 || response.statusCode() == 201) {
+                        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                        alert.setTitle("Facebook Post Success");
+                        alert.setHeaderText("Post published to Facebook successfully!");
+                        alert.setContentText("Response:\n" + response.body());
+                        alert.showAndWait();
+                    } else {
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("Facebook Post Failed");
+                        alert.setHeaderText("Facebook Graph API returned HTTP " + response.statusCode());
+                        alert.setContentText(response.body());
+                        alert.showAndWait();
+                    }
+                });
+            } catch (Exception ex) {
+                Platform.runLater(() -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setTitle("Facebook Post Error");
+                    alert.setHeaderText("Failed to send HTTP request to Facebook API");
+                    alert.setContentText(ex.getMessage());
+                    alert.showAndWait();
+                });
+            }
+        });
     }
 
     @FXML
     private void onMenuPostToBluesky(ActionEvent e) {
-        String a = text.getText();
+
+
+        String t = urlenc(title.getText());
+        String a = urlenc(text.getText());
         String enc = "";
-        try {
-            enc = URLEncoder.encode(a, StandardCharsets.UTF_8.toString());
-        } catch (Exception ex) {
-            ex.printStackTrace();
+
+        if (t.isBlank()) {
+            enc = a;
+        } else {
+            enc = t + "%0A%0A" + a;
         }
 
         String url = "https://bsky.app/intent/compose?text=" + enc;
@@ -664,5 +893,26 @@ public class HugoPostHomePageController implements Initializable {
                 "-private-window"
             )
         );
+    }
+
+    public static String extractFirstUrl(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        // 1. Check for Markdown link [label](http://...)
+        Pattern mdPattern = Pattern.compile("\\[.*?\\]\\((https?://[^\\s\\)]+)\\)", Pattern.CASE_INSENSITIVE);
+        Matcher mdMatcher = mdPattern.matcher(text);
+        if (mdMatcher.find()) {
+            return mdMatcher.group(1);
+        }
+
+        // 2. Check for plain HTTP/HTTPS URL
+        Pattern urlPattern = Pattern.compile("https?://[^\\s>\\]\\)]+", Pattern.CASE_INSENSITIVE);
+        Matcher urlMatcher = urlPattern.matcher(text);
+        if (urlMatcher.find()) {
+            return urlMatcher.group();
+        }
+
+        return null;
     }
 }
